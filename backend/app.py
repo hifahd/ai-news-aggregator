@@ -29,32 +29,52 @@ def serialize_object_id(obj):
 @app.route('/api/news', methods=['GET'])
 def get_news():
     query = request.args.get('q', 'technology')
+    page = int(request.args.get('page', 1))
+    page_size = 10
     from_date = (datetime.now() - timedelta(days=7)).strftime('%Y-%m-%d')
+    
+    skip = (page - 1) * page_size
     
     recent_news = list(news_collection.find({
         'query': query,
         'publishedAt': {'$gte': from_date}
-    }))
+    }).skip(skip).limit(page_size))
+    
+    total_results = news_collection.count_documents({
+        'query': query,
+        'publishedAt': {'$gte': from_date}
+    })
     
     if recent_news:
-        return jsonify(serialize_object_id(recent_news))
+        return jsonify({
+            'articles': serialize_object_id(recent_news),
+            'page': page,
+            'totalResults': total_results
+        })
     
     params = {
         'q': query,
         'from': from_date,
         'sortBy': 'publishedAt',
         'language': 'en',
-        'apiKey': NEWS_API_KEY
+        'apiKey': NEWS_API_KEY,
+        'page': page,
+        'pageSize': page_size
     }
     response = requests.get(NEWS_API_URL, params=params)
     if response.status_code == 200:
-        articles = response.json()['articles']
+        data = response.json()
+        articles = data['articles']
         for article in articles:
             article['query'] = query
             news_collection.insert_one(article)
-        return jsonify(articles)
+        return jsonify({
+            'articles': articles,
+            'page': page,
+            'totalResults': data['totalResults']
+        })
     else:
-        return jsonify({'error': 'Failed to fetch news'}), 500
+        return jsonify({'articles': [], 'page': page, 'totalResults': 0}), 500
 
 @app.route('/api/categories', methods=['GET'])
 def get_categories():
