@@ -5,15 +5,29 @@ function App() {
   const [news, setNews] = useState([]);
   const [categories] = useState(['technology', 'business', 'sports', 'entertainment', 'health']);
   const [selectedCategory, setSelectedCategory] = useState('technology');
+  const [error, setError] = useState(null);
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     fetchNews();
   }, [selectedCategory]);
 
   const fetchNews = async () => {
-    const response = await fetch(`http://localhost:5000/api/news?q=${selectedCategory}`);
-    const data = await response.json();
-    setNews(data);
+    setLoading(true);
+    setError(null);
+    try {
+      const response = await fetch(`http://localhost:5000/api/news?q=${selectedCategory}`);
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      const data = await response.json();
+      setNews(data);
+    } catch (e) {
+      console.error("There was a problem fetching the news:", e);
+      setError("Failed to fetch news. Please try again later.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -29,6 +43,8 @@ function App() {
           ))}
         </select>
       </div>
+      {loading && <p>Loading...</p>}
+      {error && <p className="error-message">{error}</p>}
       <div className="news-container">
         {news.map((article, index) => (
           <div key={index} className="news-item">

@@ -94,3 +94,10 @@ button {
 button:hover {
   background-color: #0056b3;
 }
+
+/* Add this to your existing CSS */
+.error-message {
+  color: red;
+  font-weight: bold;
+  margin: 20px 0;
+}
