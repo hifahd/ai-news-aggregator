@@ -8,6 +8,65 @@ h1 {
   color: #333;
 }
 
+.category-filter {
+  margin: 20px 0;
+}
+
+.category-filter select {
+  padding: 10px;
+  font-size: 16px;
+  border-radius: 4px;
+}
+
+.news-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.news-item {
+  width: 80%;
+  margin: 10px 0;
+  padding: 15px;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  text-align: left;
+  background-color: #f9f9f9;
+}
+
+.news-item h2 {
+  color: #007bff;
+  margin-top: 0;
+}
+
+.news-item a {
+  color: #28a745;
+  text-decoration: none;
+}
+
+.news-item a:hover {
+  text-decoration: underline;
+}
+
+.source, .published-at {
+  font-size: 0.8em;
+  color: #6c757d;
+}
+
+.categories {
+  margin-top: 10px;
+}
+
+.category-tag {
+  display: inline-block;
+  background-color: #e0e0e0;
+  padding: 5px 10px;
+  margin-right: 5px;
+  border-radius: 20px;
+  font-size: 12px;
+}
+
+/* Styles for the form (if you decide to keep it for future use) */
 form {
   display: flex;
   flex-direction: column;
@@ -34,25 +93,4 @@ button {
 
 button:hover {
   background-color: #0056b3;
-}
-
-.news-container {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-}
-
-.news-item {
-  width: 80%;
-  margin: 10px 0;
-  padding: 15px;
-  border: 1px solid #ddd;
-  border-radius: 8px;
-  text-align: left;
-  background-color: #f9f9f9;
-}
-
-.news-item h2 {
-  color: #007bff;
-  margin-top: 0;
 }

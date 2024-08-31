@@ -3,59 +3,40 @@ import './App.css';
 
 function App() {
   const [news, setNews] = useState([]);
-  const [title, setTitle] = useState('');
-  const [content, setContent] = useState('');
+  const [categories] = useState(['technology', 'business', 'sports', 'entertainment', 'health']);
+  const [selectedCategory, setSelectedCategory] = useState('technology');
 
   useEffect(() => {
     fetchNews();
-  }, []);
+  }, [selectedCategory]);
 
   const fetchNews = async () => {
-    const response = await fetch('http://localhost:5000/api/news');
+    const response = await fetch(`http://localhost:5000/api/news?q=${selectedCategory}`);
     const data = await response.json();
     setNews(data);
-  };
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    const response = await fetch('http://localhost:5000/api/news', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ title, content }),
-    });
-    if (response.ok) {
-      setTitle('');
-      setContent('');
-      fetchNews();
-    }
   };
 
   return (
     <div className="App">
       <h1>AI News Aggregator</h1>
-      <form onSubmit={handleSubmit}>
-        <input
-          type="text"
-          value={title}
-          onChange={(e) => setTitle(e.target.value)}
-          placeholder="Article Title"
-          required
-        />
-        <textarea
-          value={content}
-          onChange={(e) => setContent(e.target.value)}
-          placeholder="Article Content"
-          required
-        />
-        <button type="submit">Add Article</button>
-      </form>
+      <div className="category-filter">
+        <select
+          value={selectedCategory}
+          onChange={(e) => setSelectedCategory(e.target.value)}
+        >
+          {categories.map((category, index) => (
+            <option key={index} value={category}>{category.charAt(0).toUpperCase() + category.slice(1)}</option>
+          ))}
+        </select>
+      </div>
       <div className="news-container">
         {news.map((article, index) => (
           <div key={index} className="news-item">
             <h2>{article.title}</h2>
-            <p>{article.content}</p>
+            <p>{article.description}</p>
+            <a href={article.url} target="_blank" rel="noopener noreferrer">Read more</a>
+            <p className="source">Source: {article.source.name}</p>
+            <p className="published-at">Published: {new Date(article.publishedAt).toLocaleString()}</p>
           </div>
         ))}
       </div>
