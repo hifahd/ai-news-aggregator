@@ -5,6 +5,7 @@ function App() {
   const [news, setNews] = useState([]);
   const [categories] = useState(['technology', 'business', 'sports', 'entertainment', 'health']);
   const [selectedCategory, setSelectedCategory] = useState('technology');
+  const [searchTerm, setSearchTerm] = useState('');
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(false);
   const [page, setPage] = useState(1);
@@ -18,17 +19,17 @@ function App() {
     setLoading(true);
     setError(null);
     try {
-      const response = await fetch(`http://localhost:5000/api/news?q=${selectedCategory}&page=${page}`);
+      const response = await fetch(`http://localhost:5000/api/news?q=${selectedCategory}&page=${page}&search=${searchTerm}`);
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
       const data = await response.json();
-      setNews(data.articles || []); // Ensure we always set an array
+      setNews(data.articles || []);
       setTotalResults(data.totalResults);
     } catch (e) {
       console.error("There was a problem fetching the news:", e);
       setError("Failed to fetch news. Please try again later.");
-      setNews([]); // Clear news on error
+      setNews([]);
     } finally {
       setLoading(false);
     }
@@ -37,21 +38,38 @@ function App() {
   const handleCategoryChange = (e) => {
     setSelectedCategory(e.target.value);
     setPage(1);
-    setNews([]); // Clear existing news when changing category
+    setSearchTerm('');
+  };
+
+  const handleSearch = (e) => {
+    e.preventDefault();
+    setPage(1);
+    fetchNews();
   };
 
   return (
     <div className="App">
       <h1>AI News Aggregator</h1>
-      <div className="category-filter">
-        <select
-          value={selectedCategory}
-          onChange={handleCategoryChange}
-        >
-          {categories.map((category, index) => (
-            <option key={index} value={category}>{category.charAt(0).toUpperCase() + category.slice(1)}</option>
-          ))}
-        </select>
+      <div className="controls">
+        <div className="category-filter">
+          <select
+            value={selectedCategory}
+            onChange={handleCategoryChange}
+          >
+            {categories.map((category, index) => (
+              <option key={index} value={category}>{category.charAt(0).toUpperCase() + category.slice(1)}</option>
+            ))}
+          </select>
+        </div>
+        <form onSubmit={handleSearch} className="search-form">
+          <input
+            type="text"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            placeholder="Search news..."
+          />
+          <button type="submit">Search</button>
+        </form>
       </div>
       {loading && <p>Loading...</p>}
       {error && <p className="error-message">{error}</p>}

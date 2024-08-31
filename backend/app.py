@@ -29,21 +29,27 @@ def serialize_object_id(obj):
 @app.route('/api/news', methods=['GET'])
 def get_news():
     query = request.args.get('q', 'technology')
+    search = request.args.get('search', '')
     page = int(request.args.get('page', 1))
     page_size = 10
     from_date = (datetime.now() - timedelta(days=7)).strftime('%Y-%m-%d')
     
     skip = (page - 1) * page_size
     
-    recent_news = list(news_collection.find({
+    mongo_query = {
         'query': query,
         'publishedAt': {'$gte': from_date}
-    }).skip(skip).limit(page_size))
+    }
     
-    total_results = news_collection.count_documents({
-        'query': query,
-        'publishedAt': {'$gte': from_date}
-    })
+    if search:
+        mongo_query['$or'] = [
+            {'title': {'$regex': search, '$options': 'i'}},
+            {'description': {'$regex': search, '$options': 'i'}}
+        ]
+    
+    recent_news = list(news_collection.find(mongo_query).skip(skip).limit(page_size))
+    
+    total_results = news_collection.count_documents(mongo_query)
     
     if recent_news:
         return jsonify({
@@ -53,7 +59,7 @@ def get_news():
         })
     
     params = {
-        'q': query,
+        'q': f"{query} {search}".strip(),
         'from': from_date,
         'sortBy': 'publishedAt',
         'language': 'en',

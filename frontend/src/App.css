@@ -117,3 +117,38 @@ h1 {
     width: 90%;
   }
 }
+
+/* Add this to your existing CSS */
+.controls {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.search-form {
+  display: flex;
+  margin-left: 20px;
+}
+
+.search-form input {
+  padding: 10px;
+  font-size: 16px;
+  border: 1px solid #ddd;
+  border-radius: 4px 0 0 4px;
+  width: 200px;
+}
+
+.search-form button {
+  padding: 10px 15px;
+  font-size: 16px;
+  background-color: #3498db;
+  color: white;
+  border: none;
+  border-radius: 0 4px 4px 0;
+  cursor: pointer;
+}
+
+.search-form button:hover {
+  background-color: #2980b9;
+}
