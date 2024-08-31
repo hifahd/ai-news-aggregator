@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import Auth from './Auth';
 import './App.css';
 
 function App() {
@@ -10,17 +11,35 @@ function App() {
   const [loading, setLoading] = useState(false);
   const [page, setPage] = useState(1);
   const [totalResults, setTotalResults] = useState(0);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
 
   useEffect(() => {
-    fetchNews();
-  }, [selectedCategory, page]);
+    const token = localStorage.getItem('token');
+    if (token) {
+      setIsLoggedIn(true);
+      fetchNews();
+    }
+  }, [selectedCategory, page, isLoggedIn]);
 
   const fetchNews = async () => {
     setLoading(true);
     setError(null);
+    const token = localStorage.getItem('token');
     try {
-      const response = await fetch(`http://localhost:5000/api/news?q=${selectedCategory}&page=${page}&search=${searchTerm}`);
+      const response = await fetch(
+        `http://localhost:5000/api/news?q=${selectedCategory}&page=${page}&search=${searchTerm}`,
+        {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        }
+      );
       if (!response.ok) {
+        if (response.status === 401) {
+          setIsLoggedIn(false);
+          localStorage.removeItem('token');
+          throw new Error('Session expired. Please login again.');
+        }
         throw new Error(`HTTP error! status: ${response.status}`);
       }
       const data = await response.json();
@@ -28,7 +47,7 @@ function App() {
       setTotalResults(data.totalResults);
     } catch (e) {
       console.error("There was a problem fetching the news:", e);
-      setError("Failed to fetch news. Please try again later.");
+      setError(e.message);
       setNews([]);
     } finally {
       setLoading(false);
@@ -47,9 +66,25 @@ function App() {
     fetchNews();
   };
 
+  const handleLogin = () => {
+    setIsLoggedIn(true);
+    fetchNews();
+  };
+
+  const handleLogout = () => {
+    localStorage.removeItem('token');
+    setIsLoggedIn(false);
+    setNews([]);
+  };
+
+  if (!isLoggedIn) {
+    return <Auth onLogin={handleLogin} />;
+  }
+
   return (
     <div className="App">
       <h1>AI News Aggregator</h1>
+      <button onClick={handleLogout} className="logout-button">Logout</button>
       <div className="controls">
         <div className="category-filter">
           <select
