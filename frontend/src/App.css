@@ -208,3 +208,54 @@ h1 {
 .logout-button:hover {
   background-color: #c0392b;
 }
+
+/* Add these styles to your existing CSS */
+.news-item button {
+  margin-top: 10px;
+  padding: 5px 10px;
+  background-color: #f39c12;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.news-item button:hover {
+  background-color: #e67e22;
+}
+
+.controls button {
+  margin-left: 10px;
+  padding: 10px 15px;
+  background-color: #3498db;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.controls button:hover {
+  background-color: #2980b9;
+}
+
+.recommendations {
+  margin-bottom: 20px;
+  padding: 20px;
+  background-color: #ecf0f1;
+  border-radius: 8px;
+}
+
+.recommendations h2 {
+  color: #2c3e50;
+  margin-bottom: 15px;
+}
+
+.sentiment, .categories {
+  font-size: 0.9em;
+  color: #7f8c8d;
+  margin-top: 5px;
+}
+
+.sentiment {
+  font-size: 1.2em;
+}

@@ -12,12 +12,17 @@ function App() {
   const [page, setPage] = useState(1);
   const [totalResults, setTotalResults] = useState(0);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [favorites, setFavorites] = useState([]);
+  const [showFavorites, setShowFavorites] = useState(false);
+  const [recommendations, setRecommendations] = useState([]);
 
   useEffect(() => {
     const token = localStorage.getItem('token');
     if (token) {
       setIsLoggedIn(true);
       fetchNews();
+      fetchFavorites();
+      fetchRecommendations();
     }
   }, [selectedCategory, page, isLoggedIn]);
 
@@ -54,6 +59,80 @@ function App() {
     }
   };
 
+  const fetchFavorites = async () => {
+    const token = localStorage.getItem('token');
+    try {
+      const response = await fetch('http://localhost:5000/api/favorites', {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      const data = await response.json();
+      setFavorites(data);
+    } catch (e) {
+      console.error("There was a problem fetching favorites:", e);
+    }
+  };
+
+  const fetchRecommendations = async () => {
+    const token = localStorage.getItem('token');
+    try {
+      const response = await fetch('http://localhost:5000/api/recommend', {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      const data = await response.json();
+      setRecommendations(data);
+    } catch (e) {
+      console.error("There was a problem fetching recommendations:", e);
+    }
+  };
+
+  const handleFavorite = async (article) => {
+    const token = localStorage.getItem('token');
+    try {
+      const response = await fetch('http://localhost:5000/api/favorite', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ article_id: article._id })
+      });
+      if (response.ok) {
+        fetchFavorites();
+        fetchRecommendations();
+      }
+    } catch (e) {
+      console.error("There was a problem adding to favorites:", e);
+    }
+  };
+
+  const handleRemoveFavorite = async (articleId) => {
+    const token = localStorage.getItem('token');
+    try {
+      const response = await fetch(`http://localhost:5000/api/favorite/${articleId}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      if (response.ok) {
+        fetchFavorites();
+        fetchRecommendations();
+      }
+    } catch (e) {
+      console.error("There was a problem removing from favorites:", e);
+    }
+  };
+
   const handleCategoryChange = (e) => {
     setSelectedCategory(e.target.value);
     setPage(1);
@@ -69,12 +148,39 @@ function App() {
   const handleLogin = () => {
     setIsLoggedIn(true);
     fetchNews();
+    fetchFavorites();
+    fetchRecommendations();
   };
 
   const handleLogout = () => {
     localStorage.removeItem('token');
     setIsLoggedIn(false);
     setNews([]);
+    setFavorites([]);
+    setRecommendations([]);
+  };
+
+  const renderArticles = (articles) => {
+    return articles.map((article, index) => (
+      <div key={index} className="news-item">
+        <h2>{article.title}</h2>
+        <p>{article.description}</p>
+        <a href={article.url} target="_blank" rel="noopener noreferrer">Read more</a>
+        <p className="source">Source: {article.source.name}</p>
+        <p className="published-at">Published: {new Date(article.publishedAt).toLocaleString()}</p>
+        <p className="categories">Categories: {article.categories.join(', ')}</p>
+        <p className="sentiment">Sentiment: {getSentimentEmoji(article.sentiment)}</p>
+        <button onClick={() => handleFavorite(article)}>
+          {favorites.some(fav => fav._id === article._id) ? '★' : '☆'} Favorite
+        </button>
+      </div>
+    ));
+  };
+
+  const getSentimentEmoji = (sentiment) => {
+    if (sentiment > 0.05) return '😊';
+    if (sentiment < -0.05) return '😟';
+    return '😐';
   };
 
   if (!isLoggedIn) {
@@ -105,29 +211,32 @@ function App() {
           />
           <button type="submit">Search</button>
         </form>
+        <button onClick={() => setShowFavorites(!showFavorites)}>
+          {showFavorites ? 'Show All News' : 'Show Favorites'}
+        </button>
       </div>
       {loading && <p>Loading...</p>}
       {error && <p className="error-message">{error}</p>}
+      {recommendations.length > 0 && (
+        <div className="recommendations">
+          <h2>Recommended for you:</h2>
+          {renderArticles(recommendations)}
+        </div>
+      )}
       <div className="news-container">
-        {news.map((article, index) => (
-          <div key={index} className="news-item">
-            <h2>{article.title}</h2>
-            <p>{article.description}</p>
-            <a href={article.url} target="_blank" rel="noopener noreferrer">Read more</a>
-            <p className="source">Source: {article.source.name}</p>
-            <p className="published-at">Published: {new Date(article.publishedAt).toLocaleString()}</p>
-          </div>
-        ))}
+        {showFavorites ? renderArticles(favorites) : renderArticles(news)}
       </div>
-      <div className="pagination">
-        <button onClick={() => setPage(prev => Math.max(prev - 1, 1))} disabled={page === 1}>
-          Previous
-        </button>
-        <span>Page {page}</span>
-        <button onClick={() => setPage(prev => prev + 1)} disabled={news.length < 10}>
-          Next
-        </button>
-      </div>
+      {!showFavorites && (
+        <div className="pagination">
+          <button onClick={() => setPage(prev => Math.max(prev - 1, 1))} disabled={page === 1}>
+            Previous
+          </button>
+          <span>Page {page}</span>
+          <button onClick={() => setPage(prev => prev + 1)} disabled={news.length < 10}>
+            Next
+          </button>
+        </div>
+      )}
     </div>
   );
 }
