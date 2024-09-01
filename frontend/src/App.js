@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import InfiniteScroll from 'react-infinite-scroll-component';
 import Auth from './Auth';
 import './App.css';
 
@@ -10,7 +11,7 @@ function App() {
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(false);
   const [page, setPage] = useState(1);
-  const [totalResults, setTotalResults] = useState(0);
+  const [hasMore, setHasMore] = useState(true);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [favorites, setFavorites] = useState([]);
   const [showFavorites, setShowFavorites] = useState(false);
@@ -24,9 +25,10 @@ function App() {
       fetchFavorites();
       fetchRecommendations();
     }
-  }, [selectedCategory, page, isLoggedIn]);
+  }, [selectedCategory, searchTerm, isLoggedIn]);
 
   const fetchNews = async () => {
+    if (loading) return;
     setLoading(true);
     setError(null);
     const token = localStorage.getItem('token');
@@ -48,12 +50,12 @@ function App() {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
       const data = await response.json();
-      setNews(data.articles || []);
-      setTotalResults(data.totalResults);
+      setNews(prevNews => [...prevNews, ...data.articles]);
+      setPage(prevPage => prevPage + 1);
+      setHasMore(data.articles.length > 0);
     } catch (e) {
       console.error("There was a problem fetching the news:", e);
       setError(e.message);
-      setNews([]);
     } finally {
       setLoading(false);
     }
@@ -115,33 +117,19 @@ function App() {
     }
   };
 
-  const handleRemoveFavorite = async (articleId) => {
-    const token = localStorage.getItem('token');
-    try {
-      const response = await fetch(`http://localhost:5000/api/favorite/${articleId}`, {
-        method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
-      if (response.ok) {
-        fetchFavorites();
-        fetchRecommendations();
-      }
-    } catch (e) {
-      console.error("There was a problem removing from favorites:", e);
-    }
-  };
-
   const handleCategoryChange = (e) => {
     setSelectedCategory(e.target.value);
+    setNews([]);
     setPage(1);
+    setHasMore(true);
     setSearchTerm('');
   };
 
   const handleSearch = (e) => {
     e.preventDefault();
+    setNews([]);
     setPage(1);
+    setHasMore(true);
     fetchNews();
   };
 
@@ -163,12 +151,22 @@ function App() {
   const renderArticles = (articles) => {
     return articles.map((article, index) => (
       <div key={index} className="news-item">
+        {article.urlToImage && (
+          <img src={article.urlToImage} alt={article.title} className="news-image" />
+        )}
         <h2>{article.title}</h2>
         <p>{article.description}</p>
         <a href={article.url} target="_blank" rel="noopener noreferrer">Read more</a>
         <p className="source">Source: {article.source.name}</p>
         <p className="published-at">Published: {new Date(article.publishedAt).toLocaleString()}</p>
-        <p className="categories">Categories: {article.categories.join(', ')}</p>
+        <p className="topics">Topics: {article.topics.join(', ')}</p>
+        <div className="entities">
+          {Object.entries(article.entities).map(([type, entity], i) => (
+            <span key={i} className="entity-tag">
+              {type}: {entity}
+            </span>
+          ))}
+        </div>
         <p className="sentiment">Sentiment: {getSentimentEmoji(article.sentiment)}</p>
         <button onClick={() => handleFavorite(article)}>
           {favorites.some(fav => fav._id === article._id) ? '★' : '☆'} Favorite
@@ -189,7 +187,7 @@ function App() {
 
   return (
     <div className="App">
-      <h1>AI News Aggregator</h1>
+      <h1>SmartFeed: Your Personalized News</h1>
       <button onClick={handleLogout} className="logout-button">Logout</button>
       <div className="controls">
         <div className="category-filter">
@@ -215,7 +213,6 @@ function App() {
           {showFavorites ? 'Show All News' : 'Show Favorites'}
         </button>
       </div>
-      {loading && <p>Loading...</p>}
       {error && <p className="error-message">{error}</p>}
       {recommendations.length > 0 && (
         <div className="recommendations">
@@ -223,20 +220,21 @@ function App() {
           {renderArticles(recommendations)}
         </div>
       )}
-      <div className="news-container">
-        {showFavorites ? renderArticles(favorites) : renderArticles(news)}
-      </div>
-      {!showFavorites && (
-        <div className="pagination">
-          <button onClick={() => setPage(prev => Math.max(prev - 1, 1))} disabled={page === 1}>
-            Previous
-          </button>
-          <span>Page {page}</span>
-          <button onClick={() => setPage(prev => prev + 1)} disabled={news.length < 10}>
-            Next
-          </button>
+      <InfiniteScroll
+        dataLength={news.length}
+        next={fetchNews}
+        hasMore={hasMore && !showFavorites}
+        loader={<h4>Loading...</h4>}
+        endMessage={
+          <p style={{ textAlign: 'center' }}>
+            <b>Yay! You have seen it all</b>
+          </p>
+        }
+      >
+        <div className="news-container">
+          {showFavorites ? renderArticles(favorites) : renderArticles(news)}
         </div>
-      )}
+      </InfiniteScroll>
     </div>
   );
 }

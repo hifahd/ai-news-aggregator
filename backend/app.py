@@ -9,6 +9,7 @@ from datetime import datetime, timedelta
 import nltk
 from nltk.sentiment import SentimentIntensityAnalyzer
 import spacy
+from collections import Counter
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 import numpy as np
@@ -30,7 +31,7 @@ users_collection = db['users']
 favorites_collection = db['favorites']
 
 # NewsAPI configuration
-NEWS_API_KEY = 'a63624d4094f4949a89bcd7a7bf2018c'
+NEWS_API_KEY = 'your_news_api_key_here'
 NEWS_API_URL = 'https://newsapi.org/v2/everything'
 
 # NLP setup
@@ -49,7 +50,22 @@ def serialize_object_id(obj):
 
 def categorize_article(text):
     doc = nlp(text)
-    return [ent.label_ for ent in doc.ents if ent.label_ in ['ORG', 'PERSON', 'GPE', 'EVENT']]
+    
+    # Extract main topics based on noun chunks and named entities
+    topics = [chunk.text.lower() for chunk in doc.noun_chunks]
+    topics.extend([ent.text.lower() for ent in doc.ents])
+    
+    # Count occurrences and get the top 5 most common topics
+    topic_counts = Counter(topics)
+    main_topics = [topic for topic, _ in topic_counts.most_common(5)]
+    
+    # Identify key entities
+    entities = {ent.label_: ent.text for ent in doc.ents if ent.label_ in ['PERSON', 'ORG', 'GPE', 'EVENT']}
+    
+    return {
+        'topics': main_topics,
+        'entities': entities
+    }
 
 def analyze_sentiment(text):
     return sia.polarity_scores(text)['compound']
@@ -107,8 +123,11 @@ def get_news():
     recent_news = list(news_collection.find(mongo_query).skip(skip).limit(page_size))
     
     for article in recent_news:
-        article['categories'] = categorize_article(article['description'])
-        article['sentiment'] = analyze_sentiment(article['description'])
+        full_text = f"{article['title']} {article['description']}"
+        categorization = categorize_article(full_text)
+        article['topics'] = categorization['topics']
+        article['entities'] = categorization['entities']
+        article['sentiment'] = analyze_sentiment(full_text)
     
     total_results = news_collection.count_documents(mongo_query)
     
@@ -134,8 +153,11 @@ def get_news():
         articles = data['articles']
         for article in articles:
             article['query'] = query
-            article['categories'] = categorize_article(article['description'])
-            article['sentiment'] = analyze_sentiment(article['description'])
+            full_text = f"{article['title']} {article['description']}"
+            categorization = categorize_article(full_text)
+            article['topics'] = categorization['topics']
+            article['entities'] = categorization['entities']
+            article['sentiment'] = analyze_sentiment(full_text)
             news_collection.insert_one(article)
         return jsonify({
             'articles': serialize_object_id(articles),
